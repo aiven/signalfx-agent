@@ -205,6 +205,7 @@ func (o *Observer) changeHandler(oldPod *v1.Pod, newPod *v1.Pod) {
 
 func (o *Observer) endpointsInPod(pod *v1.Pod, client *k8s.Clientset, portAnnotationSet map[string]bool) []services.Endpoint {
 	endpoints := make([]services.Endpoint, 0)
+	var portlessCount uint
 
 	podIP := pod.Status.PodIP
 	if pod.Status.Phase != runningPhase {
@@ -255,6 +256,15 @@ func (o *Observer) endpointsInPod(pod *v1.Pod, client *k8s.Clientset, portAnnota
 			continue
 		}
 
+		endpointContainer := &services.Container{
+			ID:      containerID,
+			Names:   []string{containerName},
+			Image:   container.Image,
+			Command: "",
+			State:   containerState,
+			Labels:  pod.Labels,
+		}
+
 		for _, port := range container.Ports {
 			portsSeen[port.ContainerPort] = true
 
@@ -277,21 +287,29 @@ func (o *Observer) endpointsInPod(pod *v1.Pod, client *k8s.Clientset, portAnnota
 			endpoint.PortType = services.PortType(port.Protocol)
 			endpoint.Port = uint16(port.ContainerPort)
 
-			container := &services.Container{
-				ID:      containerID,
-				Names:   []string{containerName},
-				Image:   container.Image,
-				Command: "",
-				State:   containerState,
-				Labels:  pod.Labels,
-			}
-
 			endpoint.AddExtraField("kubernetes_annotations", pod.Annotations)
 
 			endpoints = append(endpoints, &services.ContainerEndpoint{
 				EndpointCore:  *endpoint,
 				AltPort:       0,
-				Container:     *container,
+				Container:     *endpointContainer,
+				Orchestration: *orchestration,
+			})
+		}
+
+		if len(container.Ports) == 0 {
+			// No ports were declared. Create an endpoint with no port that can later be user-defined.
+			id := fmt.Sprintf("%s-%s-portless-%d", pod.Name, pod.UID[:7], portlessCount)
+			portlessCount++
+			endpoint := services.NewEndpointCore(id, "", observerType, podDims)
+			endpoint.AddExtraField("kubernetes_annotations", pod.Annotations)
+			endpoint.Host = podIP
+			endpoint.PortType = services.UNKNOWN
+			endpoint.Port = 0
+			endpoints = append(endpoints, &services.ContainerEndpoint{
+				EndpointCore:  *endpoint,
+				AltPort:       0,
+				Container:     *endpointContainer,
 				Orchestration: *orchestration,
 			})
 		}
@@ -329,6 +347,7 @@ func (o *Observer) endpointsInPod(pod *v1.Pod, client *k8s.Clientset, portAnnota
 			Orchestration: *orchestration,
 		})
 	}
+
 	return endpoints
 }
 
