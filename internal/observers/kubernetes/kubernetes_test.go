@@ -102,8 +102,8 @@ var _ = Describe("Kubernetes Observer", func() {
 		startObserver()
 
 		Eventually(func() int { return len(endpoints) }).Should(Equal(1))
-		Expect(endpoints["test1-abcdefg-portless-0"].Core().Host).To(Equal("10.0.4.3"))
-		Expect(endpoints["test1-abcdefg-portless-0"].Core().Port).To(Equal(uint16(0)))
+		Expect(endpoints["test1-abcdefg-container1"].Core().Host).To(Equal("10.0.4.3"))
+		Expect(endpoints["test1-abcdefg-container1"].Core().Port).To(Equal(uint16(0)))
 	})
 
 	It("Converts a pod to a set of endpoints", func() {

@@ -185,7 +185,6 @@ func loadJSON(body []byte) (*pods, error) {
 
 func (k *Observer) discover() []services.Endpoint {
 	var instances []services.Endpoint
-	var portlessCount uint
 
 	pods, err := k.getPods()
 	if err != nil {
@@ -268,8 +267,7 @@ func (k *Observer) discover() []services.Endpoint {
 
 			if len(container.Ports) == 0 {
 				// No ports were declared. Create an endpoint with no port that can later be user-defined.
-				id := fmt.Sprintf("%s-%s-portless-%d", pod.Metadata.Name, pod.Metadata.UID[:7], portlessCount)
-				portlessCount++
+				id := fmt.Sprintf("%s-%s-%s", pod.Metadata.Name, pod.Metadata.UID[:7], container.Name)
 				endpoint := services.NewEndpointCore(id, "", observerType, dims)
 				endpoint.Host = podIP
 				endpoint.PortType = services.UNKNOWN

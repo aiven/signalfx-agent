@@ -1,5 +1,6 @@
 import pytest
 
+from tests.helpers.kubernetes import latest
 from tests.helpers.metadata import Metadata
 from tests.helpers.verify import verify
 
@@ -7,7 +8,8 @@ pytestmark = [pytest.mark.kubernetes]
 METADATA = Metadata.from_package("kubernetes/scheduler")
 
 
-@pytest.mark.skip("only works with real minikube currently")
+@pytest.mark.kubernetes
+@latest
 def test_kubernetes_scheduler(k8s_cluster):
     config = """
         observers:

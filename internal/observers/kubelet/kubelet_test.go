@@ -95,7 +95,7 @@ func TestNoPods(t *testing.T) {
 		RegisterTestingT(t)
 		setup("testdata/pods-without-ports.json")
 		Eventually(func() int { return len(endpoints) }).Should(Equal(1))
-		re := endpoints[services.ID("redis-3165242388-n1vc7-2fafcdf-portless-0")].(*services.ContainerEndpoint)
+		re := endpoints[services.ID("redis-3165242388-n1vc7-2fafcdf-redis")].(*services.ContainerEndpoint)
 		Expect(re.Port).To(Equal(uint16(0)))
 		Expect(re.Host).To(Equal("10.2.83.18"))
 	})
