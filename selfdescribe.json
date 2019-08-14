@@ -125,7 +125,7 @@
       },
       {
         "yamlName": "datapointsToExclude",
-        "doc": "A list of datapoint filters.  These filters allow you to comprehensively define which datapoints to exclude by metric name or dimension set, as well as the ability to define overrides to re-include metrics excluded by previous patterns within the same filter item.  See [monitor filtering](https://github.com/signalfx/signalfx-agent/tree/master/docs/filtering.md#monitor-level-filtering) for examples and more information.",
+        "doc": "A list of datapoint filters.  These filters allow you to comprehensively define which datapoints to exclude by metric name or dimension set, as well as the ability to define overrides to re-include metrics excluded by previous patterns within the same filter item.  See [monitor filtering](./filtering.md#additional-monitor-level-filtering) for examples and more information.",
         "default": "",
         "required": false,
         "type": "slice",
@@ -951,6 +951,7 @@
             "container_last_seen",
             "container_memory_failcnt",
             "container_memory_failures_total",
+            "container_memory_rss",
             "container_memory_usage_bytes",
             "container_memory_working_set_bytes",
             "container_spec_cpu_period",
@@ -1124,6 +1125,12 @@
           "description": "Cumulative count of memory allocation failures",
           "group": null,
           "default": true
+        },
+        "container_memory_rss": {
+          "type": "gauge",
+          "description": "Current RSS memory usage in bytes",
+          "group": null,
+          "default": false
         },
         "container_memory_usage_bytes": {
           "type": "gauge",
@@ -23854,6 +23861,7 @@
             "container_last_seen",
             "container_memory_failcnt",
             "container_memory_failures_total",
+            "container_memory_rss",
             "container_memory_usage_bytes",
             "container_memory_working_set_bytes",
             "container_spec_cpu_period",
@@ -24027,6 +24035,12 @@
           "description": "Cumulative count of memory allocation failures",
           "group": null,
           "default": true
+        },
+        "container_memory_rss": {
+          "type": "gauge",
+          "description": "Current RSS memory usage in bytes",
+          "group": null,
+          "default": false
         },
         "container_memory_usage_bytes": {
           "type": "gauge",
@@ -38990,7 +39004,7 @@
             },
             {
               "yamlName": "datapointsToExclude",
-              "doc": "A list of datapoint filters.  These filters allow you to comprehensively define which datapoints to exclude by metric name or dimension set, as well as the ability to define overrides to re-include metrics excluded by previous patterns within the same filter item.  See [monitor filtering](https://github.com/signalfx/signalfx-agent/tree/master/docs/filtering.md#monitor-level-filtering) for examples and more information.",
+              "doc": "A list of datapoint filters.  These filters allow you to comprehensively define which datapoints to exclude by metric name or dimension set, as well as the ability to define overrides to re-include metrics excluded by previous patterns within the same filter item.  See [monitor filtering](./filtering.md#additional-monitor-level-filtering) for examples and more information.",
               "default": "",
               "required": false,
               "type": "slice",
