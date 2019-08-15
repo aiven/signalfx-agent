@@ -133,15 +133,15 @@ commands:
         default: v1.14.0
     steps:
       - restore_cache:
-          key: "v2-kubectl-binary-<< parameters.version >>"
+          key: "v4-kubectl-binary-<< parameters.version >>"
       - run:
           name: Install Kubectl
           command: |
-            [[ -f /home/circleci/bin/kubectl || -f ~/.skip ]] && exit 0
+            [[ -f /home/circleci/bin/kubectl ]] && exit 0
             wget -O /home/circleci/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/<< parameters.version >>/bin/linux/amd64/kubectl
             chmod a+x /home/circleci/bin/kubectl
       - save_cache:
-          key: "v2-kubectl-binary-<< parameters.version >>"
+          key: "v4-kubectl-binary-<< parameters.version >>"
           paths:
             - /home/circleci/bin/kubectl
 
@@ -152,19 +152,64 @@ commands:
         default: v2.13.0
     steps:
       - restore_cache:
-          key: "v1-helm-binary-<< parameters.version >>"
+          key: "v3-helm-binary-<< parameters.version >>"
       - run:
           name: Install Helm
           command: |
-            [[ -f /home/circleci/bin/helm || -f ~/.skip ]] && exit 0
+            [[ -f /home/circleci/bin/helm ]] && exit 0
             wget -O /tmp/helm.tar.gz https://storage.googleapis.com/kubernetes-helm/helm-<< parameters.version >>-linux-amd64.tar.gz
             tar -zxvf /tmp/helm.tar.gz -C /tmp
             mv /tmp/linux-amd64/helm /home/circleci/bin/helm
             chmod a+x /home/circleci/bin/helm
       - save_cache:
-          key: "v1-helm-binary-<< parameters.version >>"
+          key: "v3-helm-binary-<< parameters.version >>"
           paths:
             - /home/circleci/bin/helm
+
+  install_crictl:
+    parameters:
+      version:
+        type: string
+        default: v1.11.1
+    steps:
+      - restore_cache:
+          key: "v1-crictl-binary-<< parameters.version >>"
+      - run:
+          name: Install crictl
+          environment:
+            CRICTL_VERSION: << parameters.version >>
+          command: |
+            [[ -f /home/circleci/bin/crictl ]] && exit 0
+            wget -O /tmp/crictl.tar.gz https://github.com/kubernetes-incubator/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-amd64.tar.gz
+            tar -zxvf /tmp/crictl.tar.gz -C /home/circleci/bin/
+            chmod a+x /home/circleci/bin/crictl
+      - save_cache:
+          key: "v1-crictl-binary-<< parameters.version >>"
+          paths:
+            - /home/circleci/bin/crictl
+
+  install_minikube:
+    parameters:
+      k8s_version:
+        type: string
+        default: latest
+    steps:
+      - restore_cache:
+          key: "v1-minikube-binary-<< parameters.k8s_version >>"
+      - run:
+          name: Install minikube
+          environment:
+            K8S_VERSION: << parameters.k8s_version >>
+          command: |
+            [[ -f /home/circleci/bin/minikube ]] && exit 0
+            MINIKUBE_VERSION=$(scripts/determine-compatible-minikube.py $K8S_VERSION)
+            wget -O /home/circleci/bin/minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
+            chmod a+x /home/circleci/bin/minikube
+      - save_cache:
+          key: "v1-minikube-binary-<< parameters.k8s_version >>"
+          paths:
+            - /home/circleci/bin/minikube
+
 jobs:
   build:
     executor: docker1809
@@ -311,6 +356,9 @@ jobs:
       K8S_MAX_VERSION: "v1.15.0"
       K8S_SFX_AGENT: "quay.io/signalfx/signalfx-agent-dev:latest"
       MARKERS: "kubernetes"
+      MINIKUBE_WANTUPDATENOTIFICATION: "false"
+      MINIKUBE_WANTREPORTERRORPROMPT: "false"
+      CHANGE_MINIKUBE_NONE_USER: "true"
     steps:
       - checkout
       - run:
@@ -327,20 +375,31 @@ jobs:
                     exit 0
                 fi
             fi
-
-            make run-minikube
+      - install_crictl
+      - install_minikube:
+          k8s_version: "<< parameters.k8s_version >>"
       - install_kubectl:
           version: "<< parameters.k8s_version >>"
       - install_helm
+      - run:
+          name: Start minikube
+          command: |
+            [ -f ~/.skip ] && exit 0
+            mkdir -p $HOME/.minikube/config
+            cp test-services/minikube/config.json $HOME/.minikube/config/config.json
+            # workaround for older versions of minikube that require dependencies to be in default system paths for the root user
+            sudo ln -s /home/circleci/bin/* /usr/local/bin/
+            sudo -E bash -ex test-services/minikube/start-minikube.sh
+            minikube update-context
       - import_image
       - run:
-          name: Push image to minikube
+          name: Push image to local registry
           command: |
             [ -f ~/.skip ] && exit 0
             docker tag quay.io/signalfx/signalfx-agent-dev:latest localhost:5000/signalfx-agent:latest
             docker push localhost:5000/signalfx-agent:latest
       - run_pytest:
-          pytest_options: "-n auto -m \"$MARKERS\""
+          pytest_options: "-n auto -m \"$MARKERS\" --no-use-minikube --agent-image-name=localhost:5000/signalfx-agent:latest --kubeconfig=$HOME/.kube/config"
 
   installer_tests:
     executor: machine_image

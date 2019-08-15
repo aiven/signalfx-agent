@@ -17,7 +17,9 @@
 # Based on:
 # https://github.com/kubernetes/minikube/tree/master/deploy/docker/localkube-dind
 
-exec &> >(tee -a /var/log/start-minikube.log)
+if [[ "$CIRCLECI" != "true" && "$container" = "docker" ]]; then
+    exec &> >(tee -a /var/log/start-minikube.log)
+fi
 
 KUBECONFIG_PATH=${KUBECONFIG_PATH:-"/kubeconfig"}
 TIMEOUT=${TIMEOUT:-"300"}
@@ -100,9 +102,11 @@ function print_logs() {
     fi
 }
 
-mount --make-rshared /
-/usr/local/bin/start-docker.sh
-download_kubectl
+if [[ "$CIRCLECI" != "true" && "$container" = "docker" ]]; then
+    mount --make-rshared /
+    /usr/local/bin/start-docker.sh
+    download_kubectl
+fi
 start_minikube
 start_registry
 
@@ -113,5 +117,8 @@ if ! cluster_is_ready; then
 fi
 
 kubectl version
-kubectl config view --merge=true --flatten=true > "$KUBECONFIG_PATH"
+
+if [[ "$CIRCLECI" != "true" && "$container" = "docker" ]]; then
+    kubectl config view --merge=true --flatten=true > "$KUBECONFIG_PATH"
+fi
 exit 0
