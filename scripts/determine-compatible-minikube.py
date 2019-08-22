@@ -13,7 +13,7 @@ def versiontuple(v):
 
 
 MINIKUBE_LOCALKUBE_VERSION = versiontuple("0.28.2")
-MINIKUBE_KUBEADM_VERSION = versiontuple("1.2.0")
+MINIKUBE_KUBEADM_VERSION = versiontuple("1.3.1")
 K8S_MIN_VERSION = versiontuple("1.7.0")
 K8S_MIN_KUBEADM_VERSION = versiontuple("1.11.0")
 
