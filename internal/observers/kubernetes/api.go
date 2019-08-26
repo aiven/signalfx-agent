@@ -300,6 +300,16 @@ func (o *Observer) endpointsInPod(pod *v1.Pod, client *k8s.Clientset, portAnnota
 			// No ports were declared. Create an endpoint with no port that can later be user-defined.
 			id := fmt.Sprintf("%s-%s-%s", pod.Name, pod.UID[:7], container.Name)
 			endpoint := services.NewEndpointCore(id, "", observerType, podDims)
+			//portAnnotations := annotationConfs.FilterByPortOrPortName(port.ContainerPort, port.Name)
+			//monitorType, extraConf, err := configFromAnnotations(container.Name, portAnnotations, pod, client)
+			//if err != nil {
+			//	log.WithFields(log.Fields{
+			//		"error": err,
+			//	}).Error("K8s port has invalid config annotations")
+			//} else {
+			//	endpoint.Configuration = extraConf
+			//	endpoint.MonitorType = monitorType
+			//}
 			endpoint.AddExtraField("kubernetes_annotations", pod.Annotations)
 			endpoint.Host = podIP
 			endpoint.PortType = services.UNKNOWN

@@ -51,9 +51,18 @@ func (m *Monitor) Configure(conf *Config) error {
 	// putting them directly in the array raised issues with the return type of info
 	// By placing them inside of anonymous functions I can return (info, error)
 	metadataFuncs := []func() (info, error){
-		func() (info, error) { return hostmetadata.GetCPU() },
-		func() (info, error) { return hostmetadata.GetMemory() },
-		func() (info, error) { return hostmetadata.GetOS() },
+		func() (info, error) {
+			m.logger.Debug("getting host CPU")
+			return hostmetadata.GetCPU()
+		},
+		func() (info, error) {
+			m.logger.Debug("getting host memory")
+			return hostmetadata.GetMemory()
+		},
+		func() (info, error) {
+			m.logger.Debug("getting host OS")
+			return hostmetadata.GetOS()
+		},
 	}
 
 	intervals := []time.Duration{

@@ -100,3 +100,18 @@ def test_k8s_portless_containers(k8s_cluster):
          """
         with k8s_cluster.run_agent(config) as agent:
             assert wait_for(p(has_datapoint, agent.fake_services, metric_name="bytes.used_memory_rss"))
+
+
+@pytest.mark.kubernetes
+def test_k8s_portless_containers_annotation(k8s_cluster):
+    with k8s_cluster.create_resources([TEST_SERVICES_DIR / "redis" / "redis-k8s-portless-annotated.yaml"]):
+        config = """
+            observers:
+            - type: k8s-api
+                            
+            monitors:
+            - type: collectd/redis
+              discoveryRule: Get(container_labels, "app") == "redis-portless-annotated"
+         """
+        with k8s_cluster.run_agent(config) as agent:
+            assert wait_for(p(has_datapoint, agent.fake_services, metric_name="bytes.used_memory_rss"))
