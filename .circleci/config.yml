@@ -168,23 +168,22 @@ commands:
 
   install_minikube:
     parameters:
-      k8s_version:
+      version:
         type: string
-        default: latest
+        default: v1.3.1
     steps:
       - restore_cache:
-          key: "v1-minikube-binary-<< parameters.k8s_version >>"
+          key: "v1-minikube-binary-<< parameters.version >>"
       - run:
           name: Install minikube
           environment:
-            K8S_VERSION: << parameters.k8s_version >>
+            MINIKUBE_VERSION: << parameters.version >>
           command: |
             [[ -f /home/circleci/bin/minikube ]] && exit 0
-            MINIKUBE_VERSION=$(scripts/determine-compatible-minikube.py $K8S_VERSION)
             wget -O /home/circleci/bin/minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
             chmod a+x /home/circleci/bin/minikube
       - save_cache:
-          key: "v1-minikube-binary-<< parameters.k8s_version >>"
+          key: "v1-minikube-binary-<< parameters.version >>"
           paths:
             - /home/circleci/bin/minikube
 
@@ -353,8 +352,7 @@ jobs:
                     exit 0
                 fi
             fi
-      - install_minikube:
-          k8s_version: "<< parameters.k8s_version >>"
+      - install_minikube
       - install_kubectl:
           version: "<< parameters.k8s_version >>"
       - install_helm
@@ -364,9 +362,7 @@ jobs:
             [ -f ~/.skip ] && exit 0
             mkdir -p $HOME/.minikube/config
             cp test-services/minikube/config.json $HOME/.minikube/config/config.json
-            # workaround for older versions of minikube that require dependencies to be in default system paths for the root user
-            sudo ln -s /home/circleci/bin/* /usr/local/bin/
-            sudo -E bash -ex test-services/minikube/start-minikube.sh
+            sudo "PATH=$PATH" -E bash -ex test-services/minikube/start-minikube.sh
             minikube update-context
       - import_image
       - run:

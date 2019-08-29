@@ -28,35 +28,15 @@ if [ "$K8S_VERSION" = "latest" ]; then
     K8S_VERSION=`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`
 fi
 BOOTSTRAPPER="kubeadm"
-MAJOR_VERSION=`echo ${K8S_VERSION#v} | cut -d. -f1`
-MINOR_VERSION=`echo $K8S_VERSION | cut -d. -f2`
-if [[ "$MAJOR_VERSION" =~ ^[0-9]+$ ]] && [[ "$MINOR_VERSION" =~ ^[0-9]+$ ]]; then
-    if [[ $MAJOR_VERSION -le 1 && $MINOR_VERSION -lt 11 ]]; then
-        BOOTSTRAPPER="localkube"
-    fi
-else
-    echo "Unknown K8s version '$K8S_VERSION'!"
-    exit 1
-fi
-
 KUBECTL_VERSION=$K8S_VERSION
 KUBECTL_URL="https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
 
-MINIKUBE_OPTIONS="--vm-driver=none --bootstrapper=${BOOTSTRAPPER} --kubernetes-version=${K8S_VERSION}"
+MINIKUBE_OPTIONS="--vm-driver=none --bootstrapper=${BOOTSTRAPPER} --kubernetes-version=${K8S_VERSION} --wait=true"
 
 KUBEADM_OPTIONS="--feature-gates=CoreDNS=true \
     --extra-config=kubeadm.ignore-preflight-errors=SystemVerification,FileContent--proc-sys-net-bridge-bridge-nf-call-iptables,FileExisting-crictl \
     --extra-config=kubelet.authorization-mode=AlwaysAllow \
     --extra-config=kubelet.anonymous-auth=true"
-
-if [ "$BOOTSTRAPPER" = "kubeadm" ]; then
-    MINIKUBE_OPTIONS="$MINIKUBE_OPTIONS $KUBEADM_OPTIONS"
-elif [ "$BOOTSTRAPPER" = "localkube" ]; then
-    MINIKUBE_OPTIONS="$MINIKUBE_OPTIONS --extra-config=apiserver.Authorization.Mode=RBAC"
-else
-    echo "Unsupported bootstrapper \"${BOOTSTRAPPER}\"!"
-    exit 1
-fi
 
 function download_kubectl() {
     [ -f /usr/local/bin/kubectl ] && rm -f /usr/local/bin/kubectl
@@ -68,7 +48,7 @@ function start_minikube() {
     if minikube delete >/dev/null 2>&1; then
         echo "Deleted minikube cluster"
     fi
-    minikube start $MINIKUBE_OPTIONS
+    minikube start $MINIKUBE_OPTIONS $KUBEADM_OPTIONS
 }
 
 function start_registry() {
@@ -93,13 +73,8 @@ function cluster_is_ready() {
 }
 
 function print_logs() {
-    if [ "$BOOTSTRAPPER" = "localkube" ]; then
-        journalctl --no-pager -u localkube
-        echo
-    else
-        minikube logs
-        echo
-    fi
+    minikube logs
+    echo
 }
 
 if [[ "$CIRCLECI" != "true" && "$container" = "docker" ]]; then
