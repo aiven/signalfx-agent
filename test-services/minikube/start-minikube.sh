@@ -45,7 +45,7 @@ KUBECTL_URL="https://storage.googleapis.com/kubernetes-release/release/${KUBECTL
 MINIKUBE_OPTIONS="--vm-driver=none --bootstrapper=${BOOTSTRAPPER} --kubernetes-version=${K8S_VERSION}"
 
 KUBEADM_OPTIONS="--feature-gates=CoreDNS=true \
-    --extra-config=kubeadm.ignore-preflight-errors=SystemVerification,FileContent--proc-sys-net-bridge-bridge-nf-call-iptables \
+    --extra-config=kubeadm.ignore-preflight-errors=SystemVerification,FileContent--proc-sys-net-bridge-bridge-nf-call-iptables,FileExisting-crictl \
     --extra-config=kubelet.authorization-mode=AlwaysAllow \
     --extra-config=kubelet.anonymous-auth=true"
 
