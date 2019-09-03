@@ -108,7 +108,7 @@ def test_k8s_portless_containers_annotation(k8s_cluster):
         config = """
             observers:
             - type: k8s-api
-                            
+
             monitors:
             - type: collectd/redis
               discoveryRule: Get(container_labels, "app") == "redis-portless-annotated"
