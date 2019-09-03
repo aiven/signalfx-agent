@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"regexp"
 	"strings"
 	"time"
 
@@ -56,17 +57,31 @@ func datapointsForPod(pod *v1.Pod) []*datapoint.Datapoint {
 }
 
 func dimPropsForPod(cachedPod *k8sutil.CachedPod, sc *k8sutil.ServiceCache,
-	rsc *k8sutil.ReplicaSetCache) *atypes.DimProperties {
+	rsc *k8sutil.ReplicaSetCache, jc *k8sutil.JobCache) *atypes.DimProperties {
 	props, tags := k8sutil.PropsAndTagsFromLabels(cachedPod.LabelSet)
 	for _, or := range cachedPod.OwnerReferences {
 		props[utils.LowercaseFirstChar(or.Kind)] = or.Name
 		props[utils.LowercaseFirstChar(or.Kind)+"_uid"] = string(or.UID)
 	}
 
+	tolerationProps := getPropsFromTolerations(cachedPod.Tolerations)
+	for k, v := range tolerationProps {
+		props[k] = v
+	}
+
 	// if pod is selected by a service, sync service as a tag
 	serviceTags := sc.GetMatchingServices(cachedPod)
 	for _, tag := range serviceTags {
 		tags["kubernetes_service_"+tag] = true
+	}
+
+	// if pod was created by a job, check if it was created by a cronjob and sync property if so
+	if jobName, exists := props["job"]; exists {
+		cronjobName, cronjobUID := jc.GetMatchingCronJob(cachedPod.Namespace, jobName)
+		if cronjobName != nil {
+			props["cronJob"] = *cronjobName
+			props["cronJob_uid"] = string(cronjobUID)
+		}
 	}
 
 	// if pod was created by a replicaSet, sync its deployment name as a property
@@ -90,6 +105,25 @@ func dimPropsForPod(cachedPod *k8sutil.CachedPod, sc *k8sutil.ServiceCache,
 		Properties: props,
 		Tags:       tags,
 	}
+}
+
+func getPropsFromTolerations(tolerations []v1.Toleration) map[string]string {
+	unsupportedPattern := regexp.MustCompile("[^a-zA-Z0-9_-]")
+
+	props := make(map[string]string)
+
+	for _, t := range tolerations {
+		keyValueCombo := "toleration_" + t.Key + "_" + t.Value
+		keyValueCombo = unsupportedPattern.ReplaceAllString(keyValueCombo, "_")
+
+		if _, exists := props[keyValueCombo]; exists {
+			props[keyValueCombo] += ("," + string(t.Effect))
+		} else {
+			props[keyValueCombo] = string(t.Effect)
+		}
+	}
+
+	return props
 }
 
 func phaseToInt(phase v1.PodPhase) int64 {
