@@ -38,6 +38,10 @@ class Cluster:
         assert wait_for(p(utils.has_serviceaccount, "default", self.test_namespace))
         assert wait_for(lambda: client.CoreV1Api().list_namespaced_secret(self.test_namespace).items)
 
+    @property
+    def client(self):
+        return client
+
     def delete_test_namespace(self):
         """
         Cleans up the test namespace used in the cluser by deleting it.
